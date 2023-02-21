@@ -43,7 +43,7 @@ namespace YiSha.RedisCache
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return false;
         }
@@ -67,7 +67,7 @@ namespace YiSha.RedisCache
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return t;
         }
@@ -151,7 +151,9 @@ namespace YiSha.RedisCache
         public void Dispose()
         {
             if (connection != null)
-                connection.Dispose();
+            {
+                connection.Close();
+            }
             GC.SuppressFinalize(this);
         }
     }

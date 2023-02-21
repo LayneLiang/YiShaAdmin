@@ -38,7 +38,7 @@ namespace YiSha.Util
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.WriteWithTime(ex);
+                    LogHelper.Error(ex);
                 }
                 return result;
             }
@@ -59,7 +59,7 @@ namespace YiSha.Util
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return string.Empty;
         }
@@ -78,7 +78,7 @@ namespace YiSha.Util
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return string.Empty;
         }
@@ -97,7 +97,7 @@ namespace YiSha.Util
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return ip;
         }
@@ -123,29 +123,9 @@ namespace YiSha.Util
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return string.Empty;
-        }
-
-
-        private static string GetWebClientHostName()
-        {
-            string result = string.Empty;
-            try
-            {
-                string ip = GetWebRemoteIp();
-                result = Dns.GetHostEntry(IPAddress.Parse(ip)).HostName;
-                if (result == "localhost.localdomain")
-                {
-                    result = Dns.GetHostName();
-                }
-            }
-            catch (Exception ex)
-            {
-                LogHelper.WriteWithTime(ex);
-            }
-            return result;
         }
 
         public static string Browser
@@ -160,7 +140,7 @@ namespace YiSha.Util
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.WriteWithTime(ex);
+                    LogHelper.Error(ex);
                 }
                 return string.Empty;
             }
@@ -177,7 +157,7 @@ namespace YiSha.Util
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.WriteWithTime(ex);
+                    LogHelper.Error(ex);
                 }
                 return userAgent;
             }
@@ -256,7 +236,7 @@ namespace YiSha.Util
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
             return osVersion;
         }

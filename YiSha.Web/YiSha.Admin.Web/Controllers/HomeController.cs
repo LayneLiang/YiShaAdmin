@@ -22,26 +22,26 @@ namespace YiSha.Admin.Web.Controllers
 {
     public class HomeController : BaseController
     {
-        private MenuBLL baseMenuBLL = new MenuBLL();
-        private UserBLL sysUserBLL = new UserBLL();
+        private MenuBLL menuBLL = new MenuBLL();
+        private UserBLL userBLL = new UserBLL();
         private LogLoginBLL logLoginBLL = new LogLoginBLL();
+        private MenuAuthorizeBLL menuAuthorizeBLL = new MenuAuthorizeBLL();
 
         #region 视图功能
         [HttpGet]
         [AuthorizeFilter]
-
         public async Task<IActionResult> Index()
         {
             OperatorInfo operatorInfo = await Operator.Instance.Current();
 
-            TData<List<MenuEntity>> objMenu = await baseMenuBLL.GetList(null);
-            List<MenuEntity> menuList = objMenu.Result;
+            TData<List<MenuEntity>> objMenu = await menuBLL.GetList(null);
+            List<MenuEntity> menuList = objMenu.Data;
             menuList = menuList.Where(p => p.MenuStatus == StatusEnum.Yes.ParseToInt()).ToList();
 
             if (operatorInfo.IsSystem != 1)
             {
-                TData<List<MenuAuthorizeInfo>> objMenuAuthorize = await new MenuAuthorizeBLL().GetAuthorizeList(operatorInfo);
-                List<long?> authorizeMenuIdList = objMenuAuthorize.Result.Select(p => p.MenuId).ToList();
+                TData<List<MenuAuthorizeInfo>> objMenuAuthorize = await menuAuthorizeBLL.GetAuthorizeList(operatorInfo);
+                List<long?> authorizeMenuIdList = objMenuAuthorize.Data.Select(p => p.MenuId).ToList();
                 menuList = menuList.Where(p => authorizeMenuIdList.Contains(p.Id)).ToList();
             }
 
@@ -67,17 +67,17 @@ namespace YiSha.Admin.Web.Controllers
             return View();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> LoginOff()
+        [HttpPost]
+        public async Task<IActionResult> LoginOffJson()
         {
-            #region 退出系统
             OperatorInfo user = await Operator.Instance.Current();
             if (user != null)
             {
+                #region 退出系统
                 // 如果不允许同一个用户多次登录，当用户登出的时候，就不在线了
                 if (!GlobalContext.SystemConfig.LoginMultiple)
                 {
-                    await new UserBLL().UpdateUser(new UserEntity { Id = user.UserId, IsOnline = 0 });
+                    await userBLL.UpdateUser(new UserEntity { Id = user.UserId, IsOnline = 0 });
                 }
 
                 // 登出日志
@@ -95,9 +95,14 @@ namespace YiSha.Admin.Web.Controllers
 
                 Operator.Instance.RemoveCurrent();
                 new CookieHelper().RemoveCookie("RememberMe");
+
+                return Json(new TData { Tag = 1 });
+                #endregion
             }
-            #endregion
-            return View(nameof(Login));
+            else
+            {
+                throw new Exception("非法请求");
+            }
         }
 
         [HttpGet]
@@ -147,11 +152,11 @@ namespace YiSha.Admin.Web.Controllers
                 obj.Message = "验证码错误，请重新输入";
                 return Json(obj);
             }
-            TData<UserEntity> userObj = await sysUserBLL.CheckLogin(userName, password, (int)PlatformEnum.Web);
+            TData<UserEntity> userObj = await userBLL.CheckLogin(userName, password, (int)PlatformEnum.Web);
             if (userObj.Tag == 1)
             {
-                await new UserBLL().UpdateUser(userObj.Result);
-                await Operator.Instance.AddCurrent(userObj.Result.WebToken);
+                await new UserBLL().UpdateUser(userObj.Data);
+                await Operator.Instance.AddCurrent(userObj.Data.WebToken);
             }
 
             string ip = NetHelper.Ip;
@@ -160,24 +165,24 @@ namespace YiSha.Admin.Web.Controllers
             string userAgent = NetHelper.UserAgent;
 
             Action taskAction = async () =>
-             {
-                 LogLoginEntity logLoginEntity = new LogLoginEntity
-                 {
-                     LogStatus = userObj.Tag == 1 ? OperateStatusEnum.Success.ParseToInt() : OperateStatusEnum.Fail.ParseToInt(),
-                     Remark = userObj.Message,
-                     IpAddress = ip,
-                     IpLocation = IpLocationHelper.GetIpLocation(ip),
-                     Browser = browser,
-                     OS = os,
-                     ExtraRemark = userAgent,
-                     BaseCreatorId = userObj.Result?.Id
-                 };
+            {
+                LogLoginEntity logLoginEntity = new LogLoginEntity
+                {
+                    LogStatus = userObj.Tag == 1 ? OperateStatusEnum.Success.ParseToInt() : OperateStatusEnum.Fail.ParseToInt(),
+                    Remark = userObj.Message,
+                    IpAddress = ip,
+                    IpLocation = IpLocationHelper.GetIpLocation(ip),
+                    Browser = browser,
+                    OS = os,
+                    ExtraRemark = userAgent,
+                    BaseCreatorId = userObj.Data?.Id
+                };
 
-                 // 让底层不用获取HttpContext
-                 logLoginEntity.BaseCreatorId = logLoginEntity.BaseCreatorId ?? 0;
+                // 让底层不用获取HttpContext
+                logLoginEntity.BaseCreatorId = logLoginEntity.BaseCreatorId ?? 0;
 
-                 await new LogLoginBLL().SaveForm(logLoginEntity);
-             };
+                await logLoginBLL.SaveForm(logLoginEntity);
+            };
             AsyncTaskHelper.StartTask(taskAction);
 
             obj.Tag = userObj.Tag;

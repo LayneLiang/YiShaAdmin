@@ -21,27 +21,20 @@ namespace YiSha.Business.AutoJob
         {
             Task.Run(async () =>
             {
-                if (!GlobalContext.SystemConfig.Debug)
+                TData<List<AutoJobEntity>> obj = await new AutoJobBLL().GetList(null);
+                if (obj.Tag == 1)
                 {
-                    TData<List<AutoJobEntity>> obj = await new AutoJobBLL().GetList(null);
-                    if (obj.Tag == 1)
-                    {
-                        new JobCenter().AddScheduleJob(obj.Result);
-                    }
+                    AddScheduleJob(obj.Data);
                 }
             });
         }
 
         #region 添加任务计划
-        /// <summary>
-        /// 添加任务计划
-        /// </summary>
-        /// <returns></returns>
         private void AddScheduleJob(List<AutoJobEntity> entityList)
         {
             try
             {
-                foreach (AutoJobEntity entity in entityList.Where(p => p.JobStatus == StatusEnum.Yes.ParseToInt()))
+                foreach (AutoJobEntity entity in entityList)
                 {
                     if (entity.StartTime == null)
                     {
@@ -71,16 +64,12 @@ namespace YiSha.Business.AutoJob
             }
             catch (Exception ex)
             {
-                LogHelper.Write(ex);
+                LogHelper.Error(ex);
             }
         }
         #endregion
 
-        #region 添加任务计划
-        /// <summary>
-        /// 添加任务计划
-        /// </summary>
-        /// <returns></returns>
+        #region 清除任务计划
         public void ClearScheduleJob()
         {
             try
@@ -89,7 +78,7 @@ namespace YiSha.Business.AutoJob
             }
             catch (Exception ex)
             {
-                LogHelper.Write(ex);
+                LogHelper.Error(ex);
             }
         }
         #endregion

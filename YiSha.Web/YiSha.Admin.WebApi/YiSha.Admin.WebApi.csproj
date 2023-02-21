@@ -18,13 +18,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.0.0" />
-    <PackageReference Include="Senparc.Weixin.WxOpen" Version="3.3.7" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\YiSha.Business\YiSha.Business.AutoJob\YiSha.Business.AutoJob.csproj" />
     <ProjectReference Include="..\..\YiSha.Business\YiSha.Business\YiSha.Business.csproj" />
+    <ProjectReference Include="..\..\YiSha.Util\YiSha.Util\YiSha.Util.csproj" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using NPOI.HSSF.UserModel;
 using NPOI.XSSF.UserModel;
 using NPOI.SS.UserModel;
@@ -28,7 +29,7 @@ namespace YiSha.Util
         /// <param name="list"></param>
         public string ExportToExcel(string sFileName, string sHeaderText, List<T> list, string[] columns)
         {
-            sFileName = string.Format("{0}_{1}", SecurityHelper.GetGuid(), sFileName);
+            sFileName = string.Format("{0}_{1}", SecurityHelper.GetGuid(true), sFileName);
             string sRoot = GlobalContext.HostingEnvironment.ContentRootPath;
             string partDirectory = string.Format("Resource{0}Export{0}Excel", Path.DirectorySeparatorChar);
             string sDirectory = Path.Combine(sRoot, partDirectory);
@@ -66,7 +67,9 @@ namespace YiSha.Util
             ICellStyle dateStyle = workbook.CreateCellStyle();
             IDataFormat format = workbook.CreateDataFormat();
             dateStyle.DataFormat = format.GetFormat("yyyy-MM-dd");
-
+            //单元格填充循环外设定单元格格式，避免4000行异常
+            ICellStyle contentStyle = workbook.CreateCellStyle();
+            contentStyle.Alignment = HorizontalAlignment.Left;
             #region 取得每列的列宽（最大宽度）
             int[] arrColWidth = new int[properties.Length];
             for (int columnIndex = 0; columnIndex < properties.Length; columnIndex++)
@@ -125,8 +128,7 @@ namespace YiSha.Util
                             }
                             headerRow.CreateCell(columnIndex).SetCellValue(description);
                             headerRow.GetCell(columnIndex).CellStyle = headStyle;
-
-                            //设置列宽  
+                            //根据表头设置列宽  
                             sheet.SetColumnWidth(columnIndex, (arrColWidth[columnIndex] + 1) * 256);
                         }
                     }
@@ -135,15 +137,19 @@ namespace YiSha.Util
                 #endregion
 
                 #region 填充内容
-                ICellStyle contentStyle = workbook.CreateCellStyle();
-                contentStyle.Alignment = HorizontalAlignment.Left;
                 IRow dataRow = sheet.CreateRow(rowIndex + 2); // 前面2行已被占用
                 for (int columnIndex = 0; columnIndex < properties.Length; columnIndex++)
                 {
                     ICell newCell = dataRow.CreateCell(columnIndex);
                     newCell.CellStyle = contentStyle;
-
                     string drValue = properties[columnIndex].GetValue(list[rowIndex], null).ParseToString();
+                    //根据单元格内容设定列宽
+                    int length = Math.Min(253, Encoding.UTF8.GetBytes(drValue).Length + 1) * 256;
+                    if (sheet.GetColumnWidth(columnIndex) < length && !drValue.IsEmpty())
+                    {
+                        sheet.SetColumnWidth(columnIndex, length);
+                    }
+
                     switch (properties[columnIndex].PropertyType.ToString())
                     {
                         case "System.String":
@@ -180,6 +186,11 @@ namespace YiSha.Util
                             newCell.SetCellValue(drValue.ParseToDouble());
                             break;
 
+                        case "System.Single":
+                        case "System.Nullable`1[System.Single]":
+                            newCell.SetCellValue(drValue.ParseToDouble());
+                            break;
+
                         case "System.Decimal":
                         case "System.Nullable`1[System.Decimal]":
                             newCell.SetCellValue(drValue.ParseToDouble());
@@ -200,6 +211,7 @@ namespace YiSha.Util
             using (MemoryStream ms = new MemoryStream())
             {
                 workbook.Write(ms);
+                workbook.Close();
                 ms.Flush();
                 ms.Position = 0;
                 return ms;
@@ -296,6 +308,11 @@ namespace YiSha.Util
                                     mapPropertyInfoDict[j].SetValue(entity, row.GetCell(j).ParseToString().ParseToDouble());
                                     break;
 
+                                case "System.Single":
+                                case "System.Nullable`1[System.Single]":
+                                    mapPropertyInfoDict[j].SetValue(entity, row.GetCell(j).ParseToString().ParseToDouble());
+                                    break;
+
                                 case "System.Decimal":
                                 case "System.Nullable`1[System.Decimal]":
                                     mapPropertyInfoDict[j].SetValue(entity, row.GetCell(j).ParseToString().ParseToDecimal());
@@ -311,6 +328,8 @@ namespace YiSha.Util
                 }
                 list.Add(entity);
             }
+            hssfWorkbook?.Close();
+            xssWorkbook?.Close();
             return list;
         }
 
@@ -346,3 +365,4 @@ namespace YiSha.Util
         #endregion
     }
 }
+

@@ -86,6 +86,7 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
         }
 
         [HttpGet]
+        [AuthorizeFilter("organization:user:view")]
         public async Task<IActionResult> GetFormJson(long id)
         {
             TData<UserEntity> obj = await userBLL.GetEntity(id);
@@ -93,16 +94,17 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
         }
 
         [HttpGet]
+        [AuthorizeFilter("organization:user:view")]
         public async Task<IActionResult> GetUserAuthorizeJson()
         {
             TData<UserAuthorizeInfo> obj = new TData<UserAuthorizeInfo>();
             OperatorInfo operatorInfo = await Operator.Instance.Current();
             TData<List<MenuAuthorizeInfo>> objMenuAuthorizeInfo = await new MenuAuthorizeBLL().GetAuthorizeList(operatorInfo);
-            obj.Result = new UserAuthorizeInfo();
-            obj.Result.IsSystem = operatorInfo.IsSystem;
+            obj.Data = new UserAuthorizeInfo();
+            obj.Data.IsSystem = operatorInfo.IsSystem;
             if (objMenuAuthorizeInfo.Tag == 1)
             {
-                obj.Result.MenuAuthorize = objMenuAuthorizeInfo.Result;
+                obj.Data.MenuAuthorize = objMenuAuthorizeInfo.Data;
             }
             obj.Tag = 1;
             return Json(obj);
@@ -135,6 +137,7 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
         }
 
         [HttpPost]
+        [AuthorizeFilter("organization:user:edit")]
         public async Task<IActionResult> ChangePasswordJson(ChangePasswordParam entity)
         {
             TData<long> obj = await userBLL.ChangePassword(entity);
@@ -142,6 +145,7 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
         }
 
         [HttpPost]
+        [AuthorizeFilter("organization:user:edit")]
         public async Task<IActionResult> ChangeUserJson(UserEntity entity)
         {
             TData<long> obj = await userBLL.ChangeUser(entity);
@@ -149,6 +153,7 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
         }
 
         [HttpPost]
+        [AuthorizeFilter("organization:user:edit")]
         public async Task<IActionResult> ImportUserJson(ImportParam param)
         {
             List<UserEntity> list = new ExcelHelper<UserEntity>().ImportFromExcel(param.FilePath);
@@ -157,6 +162,7 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
         }
 
         [HttpPost]
+        [AuthorizeFilter("organization:user:edit")]
         public async Task<IActionResult> ExportUserJson(UserListParam param)
         {
             TData<string> obj = new TData<string>();
@@ -165,9 +171,9 @@ namespace YiSha.Admin.Web.Areas.OrganizationManage.Controllers
             {
                 string file = new ExcelHelper<UserEntity>().ExportToExcel("用户列表.xls",
                                                                           "用户列表",
-                                                                          userObj.Result,
+                                                                          userObj.Data,
                                                                           new string[] { "UserName", "RealName", "Gender", "Mobile", "Email" });
-                obj.Result = file;
+                obj.Data = file;
                 obj.Tag = 1;
             }
             return Json(obj);

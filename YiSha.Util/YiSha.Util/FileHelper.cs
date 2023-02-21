@@ -100,7 +100,7 @@ namespace YiSha.Util
             }
             string fileExtension = TextHelper.GetCustomValue(Path.GetExtension(file.FileName), ".png");
 
-            string newFileName = SecurityHelper.GetGuid() + fileExtension;
+            string newFileName = SecurityHelper.GetGuid(true) + fileExtension;
             string dir = "Resource" + Path.DirectorySeparatorChar + dirModule + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy-MM-dd").Replace('-', Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
             string absoluteDir = Path.Combine(GlobalContext.HostingEnvironment.ContentRootPath, dir);
@@ -117,7 +117,7 @@ namespace YiSha.Util
                     await file.CopyToAsync(fs);
                     fs.Flush();
                 }
-                obj.Result = Path.AltDirectorySeparatorChar + ConvertDirectoryToHttp(dir) + newFileName;
+                obj.Data = Path.AltDirectorySeparatorChar + ConvertDirectoryToHttp(dir) + newFileName;
                 obj.Message = Path.GetFileNameWithoutExtension(TextHelper.GetCustomValue(file.FileName, newFileName));
                 obj.Description = (file.Length / 1024).ToString(); // KB
                 obj.Tag = 1;
@@ -147,6 +147,8 @@ namespace YiSha.Util
                 obj.Message = "请先选择文件！";
                 return obj;
             }
+
+            filePath = FilterFilePath(filePath);
             filePath = "Resource" + Path.DirectorySeparatorChar + dirModule + Path.DirectorySeparatorChar + filePath;
             string absoluteDir = Path.Combine(GlobalContext.HostingEnvironment.ContentRootPath, filePath);
             try
@@ -178,6 +180,11 @@ namespace YiSha.Util
         /// <returns></returns>
         public static TData<FileContentResult> DownloadFile(string filePath, int delete)
         {
+            filePath = FilterFilePath(filePath);
+            if (!filePath.StartsWith("wwwroot") && !filePath.StartsWith("Resource"))
+            {
+                throw new Exception("非法访问");
+            }
             TData<FileContentResult> obj = new TData<FileContentResult>();
             string absoluteFilePath = GlobalContext.HostingEnvironment.ContentRootPath + Path.DirectorySeparatorChar + filePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
             byte[] fileBytes = File.ReadAllBytes(absoluteFilePath);
@@ -185,15 +192,16 @@ namespace YiSha.Util
             {
                 File.Delete(absoluteFilePath);
             }
+            // md5 值
             string fileNamePrefix = DateTime.Now.ToString("yyyyMMddHHmmss");
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-            string title = string.Empty;
+            string title = fileNameWithoutExtension;
             if (fileNameWithoutExtension.Contains("_"))
             {
                 title = fileNameWithoutExtension.Split('_')[1].Trim();
             }
             string fileExtensionName = Path.GetExtension(filePath);
-            obj.Result = new FileContentResult(fileBytes, "application/octet-stream")
+            obj.Data = new FileContentResult(fileBytes, "application/octet-stream")
             {
                 FileDownloadName = string.Format("{0}_{1}{2}", fileNamePrefix, title, fileExtensionName)
             };
@@ -262,7 +270,7 @@ namespace YiSha.Util
             }
             catch (Exception ex)
             {
-                LogHelper.WriteWithTime(ex);
+                LogHelper.Error(ex);
             }
         }
 
@@ -293,6 +301,14 @@ namespace YiSha.Util
                 obj.Message = "只有文件扩展名是 " + allowExtension + " 的文件才能上传";
             }
             return obj;
+        }
+
+        public static string FilterFilePath(string filePath)
+        {
+            filePath = filePath.Replace("../", string.Empty);
+            filePath = filePath.Replace("..", string.Empty);
+            filePath = filePath.TrimStart('/');
+            return filePath;
         }
     }
 }
